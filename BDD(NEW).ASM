@@ -9,15 +9,15 @@ START:                                     ;70000H  --4.BIN    ^  D v
                                            ;98000H  --9.BIN  D |    |
     MOV CX,9                               ;----------------------------
     CALL READDISK
-    LOOP THIS FAR -3               ;ѭ����һ��ָ��9��
+    LOOP THIS FAR -3               ;循环上一条指令9次
 
     JMP DISPLAY
 ;----------------------------------
-    DISKDATA DB 0FFH,97H           ;�������ε�ַ     ;0110H
-    BUFFER   DB 10H,00H            ;���ݻ�����
-    HANDLE   DB 00,00              ;�ļ����
+    DISKDATA DB 0FFH,97H           ;缓冲区段地址     ;0110H
+    BUFFER   DB 10H,00H            ;数据缓冲区
+    HANDLE   DB 00,00              ;文件句柄
              DB 00,00
-    FILENAME DB '9.BIN',00,00,00   ;�ļ���
+    FILENAME DB '9.BIN',00,00,00   ;文件名
              DB '$' 
 ;----------------------------------
     CSDISKDATAADDR EQU OFFSET DISKDATA
@@ -39,12 +39,12 @@ FILETEXT PROC NEAR
     MOV CX,9
 
 FILETEXTLOO:
-    CLC                           ;CF��0,��ֹ��
+    CLC                           ;CF置0,防止误触
     MOV DX,OFFSET FILENAME
     MOV AX,3D00H
-    INT 21H                       ;���򿪳ɹ�,CF=0.ʧ����Ϊ1
+    INT 21H                       ;若打开成功,CF=0.失败则为1
 
-    JC MISSFILE                   ;��CF=1
+    JC MISSFILE                   ;若CF=1
     MOV BX,DX
     DEC BYTE PTR [BX]
 
@@ -83,21 +83,21 @@ READDISK PROC NEAR
 
     MOV BP,CSDISKDATAADDR
     MOV AX,CS:[BP]
-    MOV DS,AX                     ;DSָ�򻺳�����
+    MOV DS,AX                     ;DS指向缓冲区段
 
     CALL MOVDATA
 
-    LEA DX,DS:[FILENAMEADDR]      ;DXָ���ļ���
+    LEA DX,DS:[FILENAMEADDR]      ;DX指向文件名
     MOV AX,3D00H
-    INT 21H                       ;AH���ļ�AL��ȡ��ʽֻ��
+    INT 21H                       ;AH打开文件AL读取方式只读
 
-    MOV BX,AX                     ;BX�ļ���
-    MOV AX,3F00H                  ;���ļ�
-    MOV CX,8000H                  ;�ֽ���8000H�ֽ�(32768�ֽ�)
-    LEA DX,DS:[DATABUFFERADDR]    ;DXָ�����ݻ�����
+    MOV BX,AX                     ;BX文件号
+    MOV AX,3F00H                  ;读文件
+    MOV CX,8000H                  ;字节数8000H字节(32768字节)
+    LEA DX,DS:[DATABUFFERADDR]    ;DX指向数据缓冲区
     INT 21H
 
-    MOV AH,3EH                    ;�ر��ļ�
+    MOV AH,3EH                    ;关闭文件
     INT 21H
 
     MOV BP,[CSDISKDATAADDR]       ;
@@ -124,11 +124,11 @@ MOVDATA PROC NEAR
     PUSH AX
     PUSH BP
 
-    MOV CX,8                      ;һ��16�ֽ�
+    MOV CX,8                      ;一共16字节
     MOV BP,OFFSET DISKDATA
 MOVDATALOO:
     MOV AX,CS:[BP]
-    MOV DS:[BP - 110H],AX           ;��������е�Ӧ���ֶε�����ͷ��
+    MOV DS:[BP - 110H],AX           ;传输程序中的应用字段到数据头部
     ADD BP,2
     LOOP MOVDATALOO
 
@@ -145,37 +145,37 @@ DISPLAY:
     MOV AX,05800H
     MOV DS,AX
 
-    MOV CX,9                       ;�л����ݶ�
+    MOV CX,9                       ;切换数据段
 HANDOFFSET:
     PUSH CX
     MOV SI,0000
 
-    MOV CX,64                      ;�л�һ������
+    MOV CX,64                      ;切换一份数据
 HANDDATA:
     PUSH CX
 
     MOV CX,4
-HANDINDATA:                        ;�л�500�ֽ��ڵ�����(125�ֽ�)
+HANDINDATA:                        ;切换500字节内的数据(125字节)
     PUSH CX
 
     XOR BX,BX
-    MOV CX,125                     ;�л�����
+    MOV CX,125                     ;切换画面
 HANDFRAMES:
     PUSH CX
 
     LODSB
-    MOV CX,8                       ;�л���������
+    MOV CX,8                       ;切换画面像素
 HANDBIT:
     SHL AL,1
     PUSHF
     POP DX
     AND DX,0001
     JNP WHITE
-    MOV WORD PTR ES:[BX],0020H     ;��ɫ
+    MOV WORD PTR ES:[BX],0020H     ;黑色
     MOV WORD PTR ES:[BX+2],0020H
     JMP THIS FAR +13
 WHITE:
-    MOV WORD PTR ES:[BX],7FDBH     ;��ɫ
+    MOV WORD PTR ES:[BX],7FDBH     ;白色
     MOV WORD PTR ES:[BX+2],7FDBH
     ADD BX,4
     LOOP HANDBIT
@@ -187,7 +187,7 @@ WHITE:
     POP CX
     LOOP HANDINDATA
 
-    ADD SI,0CH                     ;500+12�ֽ�
+    ADD SI,0CH                     ;500+12字节
     POP CX
     LOOP HANDDATA
 
@@ -204,7 +204,7 @@ WHITE:
 WAITONE PROC NEAR
     PUSH CX
 
-    MOV CX,7500
+    MOV CX,7500                    ;这里没有0.1秒
     NOP
     LOOP THIS FAR -1
 

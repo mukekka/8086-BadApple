@@ -204,7 +204,7 @@ WHITE:
 WAITONE PROC NEAR
     PUSH CX
 
-    MOV CX,7500                    ;这里没有0.1秒
+    MOV CX,26500
     NOP
     LOOP THIS FAR -1
 

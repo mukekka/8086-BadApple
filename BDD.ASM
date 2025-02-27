@@ -10,194 +10,198 @@
 ASSUME CS:CODE;,DS:DATA,SS:STACK,ES:EXTRA
 CODE SEGMENT
     ORG 0100H
-	START:
-    	CLD
-    	STI
+START:
+	CLD
+	STI
 
-        PUSH CS
-        POP DX
-        CALL HEX2ASC
-        LEA DX,PROSEG
-        MOV AH,09H
-        INT 21H
+	PUSH CS
+	POP DX
+	CALL HEX2ASC
+	LEA DX,PROSEG
+	MOV AH,09H
+	INT 21H
 
-        MOV AH,01H
-        INT 21H
-        CMP AL,13
-        JNE PROEND
+	MOV AH,01H
+	INT 21H
+	CMP AL,13
+	JNE PROEND
 
-        CALL FILETEXT
+	CALL FILETEXT
 
-        MOV CX,9
-    	    CALL READDISK
-        LOOP THIS FAR -3               ;Âæ™ÁéØ‰∏ä‰∏ÄÊù°Êåá‰ª§9Ê¨°
+	MOV CX,9
+	    CALL READDISK
+	LOOP THIS FAR -3                 ;—≠ª∑…œ“ªÃı÷∏¡Ó9¥Œ
 
-        JMP DISPLAY
+	JMP DISPLAY
 
 	PROEND:
-        MOV AX,4C00H
-        INT 21H
+	MOV AX,4C00H
+	INT 21H
 ;-------------------------------------------------------------------------------
-          DISKDATA DB 0FFH,97H           ;ÁºìÂÜ≤Âå∫ÊÆµÂú∞ÂùÄ     ;012AH
-          BUFFER   DB 10H,00H            ;Êï∞ÊçÆÁºìÂÜ≤Âå∫
-          HANDLE   DB 00,00              ;Êñá‰ª∂Âè•ÊüÑ
-                   DB 00,00
-          FILENAME DB '9.BIN',00,00,00   ;Êñá‰ª∂Âêç
-                   DB '$',00
+	  DISKDATA DB 0FFH,97H           ;ª∫≥Â«¯∂Œµÿ÷∑     ;012AH
+	  BUFFER   DB 10H,00H            ; ˝æ›ª∫≥Â«¯
+	  HANDLE   DB 00,00              ;Œƒº˛æ‰±˙
+    		   DB 00,00
+	  FILENAME DB '9.BIN',00,00,00   ;Œƒº˛√˚
+	    	   DB '$',00
 ;-------------------------------------------------------------------------------
     CSDISKDATAADDR EQU OFFSET DISKDATA
     CSFILENAMEADDR EQU OFFSET FILENAME
 ;-------------------------------------------------------------------------------
       DISKDATAADDR EQU 00
-        BUFFERADDR EQU 02
-        HANDLEADDR EQU 04
+    	BUFFERADDR EQU 02
+	    HANDLEADDR EQU 04
       FILENAMEADDR EQU 08
     DATABUFFERADDR EQU 10H
+      CTRLPORT8253 EQU 43H
+      DATAPORT8253 EQU 40H
 ;-------------------------------------------------------------------------------
-          ERRINFO1 DB 'MISSING FILES',13,10,'$'					;16chars
-       	    PROSEG DB 'THE PROGRAME SEGMENT IS '				;24chars
-		HEX2ASCBUF DB 30H,30H,30H,30H							;4chars
-		  SHIFTKEY DB 13,10										;2chars
-		PRESSENTER DB 'PRESS ENTER KEY TO CONTINUE',13,10,'$'	;30chars
-        ASCIITABLE DB '0123456789ABCFEF'						;16chars
+	  ERRINFO1 DB 'MISSING FILES',13,10,'$'                         ;16chars
+	    PROSEG DB 'THE PROGRAME SEGMENT IS '                        ;24chars
+	HEX2ASCBUF DB 30H,30H,30H,30H                                   ;4chars
+	  SHIFTKEY DB 13,10                                             ;2chars
+	PRESSENTER DB 'PRESS ENTER KEY TO CONTINUE',13,10,'$'           ;30chars
+	ASCIITABLE DB '0123456789ABCFEF'                                ;16chars
 ;-------------------------------------------------------------------------------
     HEX2ASC PROC NEAR
-    	PUSHF
-    	PUSH AX
-    	PUSH BX
-    	PUSH CX
-    	PUSH DI
-    	PUSH ES
-    	PUSH DS
-    	POP ES
-    	CLD
-        	LEA DI,HEX2ASCBUF
-        	LEA BX,ASCIITABLE
-        	MOV CX,4
-				HEX2CHAR:
-        		PUSH CX
-        			XOR AL,AL
-        			MOV CX,4
-					DXSHIFTAL:
-    	    			SHL DX,1
-        				RCL AL,1
-        			LOOP DXSHIFTAL
-        			XLAT
-        			STOSB
-        		POP CX
-        	LOOP HEX2CHAR
-        	LEA DX,HEX2ASCBUF
-    	POP ES
-    	POP DI
-    	POP CX
-    	POP BX
-    	POP AX
-    	POPF
-    	RET
+	PUSHF
+	PUSH AX
+	PUSH BX
+	PUSH CX
+	PUSH DI
+	PUSH ES
+	PUSH DS
+	POP ES
+	    CLD
+	    LEA DI,HEX2ASCBUF
+	    LEA BX,ASCIITABLE
+	    MOV CX,4
+	    HEX2CHAR:
+		PUSH CX
+		    XOR AL,AL
+		    MOV CX,4
+		    DXSHIFTAL:
+			SHL DX,1
+			RCL AL,1
+		    LOOP DXSHIFTAL
+		    XLAT
+		    STOSB
+		POP CX
+	    LOOP HEX2CHAR
+	    LEA DX,HEX2ASCBUF
+	POP ES
+	POP DI
+	POP CX
+	POP BX
+	POP AX
+	POPF
+	RET
     HEX2ASC ENDP
 ;-------------------------------------------------------------------------------
     FILETEXT PROC NEAR
-        PUSH AX
-        PUSH BX
-        PUSH CX
-        PUSH DX
-        	MOV CX,9
-				FILETEXTLOO:
-        		CLC                           ;CFÁΩÆ0,Èò≤Ê≠¢ËØØËß¶
-        		MOV DX,OFFSET FILENAME
-        		MOV AX,3D00H
-        		INT 21H                       ;Ëã•ÊâìÂºÄÊàêÂäü,CF=0.Â§±Ë¥•Âàô‰∏∫1
+	PUSH AX
+	PUSH BX
+	PUSH CX
+	PUSH DX
+	    MOV CX,9
+		FILETEXTLOO:
+		    CLC                           ;CF÷√0,∑¿÷πŒÛ¥•
+    		MOV DX,OFFSET FILENAME
+	    	MOV AX,3D00H
+		    INT 21H                       ;»Ù¥Úø™≥…π¶,CF=0. ß∞‹‘ÚŒ™1
 
-        		JC MISSFILE                   ;Ëã•CF=1
-	        	MOV BX,DX
-    	    	DEC BYTE PTR [BX]
-
-        		PUSH BX
-        			MOV BX,AX
-        			MOV AX,3E00H
-        			INT 21H
-        		POP BX
-        	LOOP FILETEXTLOO
-        	MOV BYTE PTR [FILENAME],'9'
-        POP DX
-        POP CX
-        POP BX
-        POP AX
-        RET
+    		JC MISSFILE                   ;»ÙCF=1
+	    	MOV BX,DX
+		    DEC BYTE PTR [BX]
+		
+    		PUSH BX
+	    	    MOV BX,AX
+		        MOV AX,3E00H
+		        INT 21H
+    		POP BX
+	    LOOP FILETEXTLOO
+	    MOV BYTE PTR [FILENAME],'9'
+	POP DX
+	POP CX
+	POP BX
+	POP AX
+	RET
 
 	MISSFILE:
-        MOV DX,OFFSET ERRINFO1
-        MOV AH,09
-        INT 21H
-        MOV DX,OFFSET FILENAME
-        MOV AH,09
-        INT 21H
-        JMP PROEND
+	MOV DX,OFFSET ERRINFO1
+	MOV AH,09
+	INT 21H
+	MOV DX,OFFSET FILENAME
+	MOV AH,09
+	INT 21H
+	JMP PROEND
     FILETEXT ENDP
 ;-------------------------------------------------------------------------------
     READDISK PROC NEAR
-        PUSHF
-        PUSH AX
-        PUSH BX
-        PUSH CX
-        PUSH DX
-        PUSH BP
-        PUSH DS
-        	MOV BP,CSDISKDATAADDR
-        	MOV AX,CS:[BP]
-        	MOV DS,AX                     ;DSÊåáÂêëÁºìÂÜ≤Âå∫ÊÆµ
+	PUSHF
+	PUSH AX
+	PUSH BX
+	PUSH CX
+	PUSH DX
+	PUSH BP
+	PUSH DS
+	    MOV BP,CSDISKDATAADDR
+	    MOV AX,CS:[BP]
+	    MOV DS,AX                     ;DS÷∏œÚª∫≥Â«¯∂Œ
 
-        	CALL MOVDATA
+	    CALL MOVDATA
 
-        	LEA DX,DS:[FILENAMEADDR]      ;DXÊåáÂêëÊñá‰ª∂Âêç
-        	MOV AX,3D00H
-        	INT 21H                       ;AHÊâìÂºÄÊñá‰ª∂ALËØªÂèñÊñπÂºèÂè™ËØª
+	    LEA DX,DS:[FILENAMEADDR]      ;DX÷∏œÚŒƒº˛√˚
+	    MOV AX,3D00H
+	    INT 21H                       ;AH¥Úø™Œƒº˛AL∂¡»°∑Ω Ω÷ª∂¡
 
-        	MOV BX,AX                     ;BXÊñá‰ª∂Âè∑
-        	MOV AX,3F00H                  ;ËØªÊñá‰ª∂
-        	MOV CX,8000H                  ;Â≠óËäÇÊï∞8000HÂ≠óËäÇ(32768Â≠óËäÇ)
-        	LEA DX,DS:[DATABUFFERADDR]    ;DXÊåáÂêëÊï∞ÊçÆÁºìÂÜ≤Âå∫
-        	INT 21H
+	    MOV BX,AX                     ;BXŒƒº˛∫≈
+	    MOV AX,3F00H                  ;∂¡Œƒº˛
+	    MOV CX,8000H                  ;◊÷Ω⁄ ˝8000H◊÷Ω⁄(32768◊÷Ω⁄)
+	    LEA DX,DS:[DATABUFFERADDR]    ;DX÷∏œÚ ˝æ›ª∫≥Â«¯
+	    INT 21H
 
-        	MOV AH,3EH                    ;ÂÖ≥Èó≠Êñá‰ª∂
-        	INT 21H
+	    MOV AH,3EH                    ;πÿ±’Œƒº˛
+	    INT 21H
 
-        	MOV BP,[CSDISKDATAADDR]       ;
-        	MOV BX,CS:[BP]
-        	SUB BX,800H
-        	MOV CS:[BP],BX
+	    MOV BP,[CSDISKDATAADDR]       ;
+	    MOV BX,CS:[BP]
+	    SUB BX,800H
+	    MOV CS:[BP],BX
 
-        	MOV BP,[CSFILENAMEADDR]       ;
-        	MOV BL,CS:[BP]
-        	DEC BL
-        	MOV CS:[BP],BL
-        POP DS
-        POP BP
-        POP DX
-        POP CX
-        POP BX
-        POP AX
-        POPF
-        RET
+	    MOV BP,[CSFILENAMEADDR]       ;
+	    MOV BL,CS:[BP]
+	    DEC BL
+	    MOV CS:[BP],BL
+	POP DS
+	POP BP
+	POP DX
+	POP CX
+	POP BX
+	POP AX
+	POPF
+	RET
     READDISK ENDP
 ;-------------------------------------------------------------------------------
     MOVDATA PROC NEAR
-        PUSH AX
-        PUSH BP
-        MOV CX,8;‰∏ÄÂÖ±16Â≠óËäÇ
-        MOV BP,OFFSET DISKDATA
-		MOVDATALOO:;‰º†ËæìÁ®ãÂ∫è‰∏≠ÁöÑÂ∫îÁî®Â≠óÊÆµÂà∞Êï∞ÊçÆÂ§¥ÈÉ®
-    		MOV AX,CS:[BP]
-    		MOV DS:[BP - 012AH],AX
-        	ADD BP,2
-        LOOP MOVDATALOO
-        POP BP
-        POP AX
-        RET
+	PUSH AX
+	PUSH BP
+	MOV CX,8;“ªπ≤16◊÷Ω⁄
+	MOV BP,OFFSET DISKDATA
+	    MOVDATALOO:;¥´ ‰≥Ã–Ú÷–µƒ”¶”√◊÷∂ŒµΩ ˝æ›Õ∑≤ø
+	    MOV AX,CS:[BP]
+	    MOV DS:[BP - 012AH],AX
+	    ADD BP,2
+	LOOP MOVDATALOO
+	POP BP
+	POP AX
+	RET
     MOVDATA ENDP
 ;-------------------------------------------------------------------------------
 DISPLAY:
     XOR DI,DI
+    
+    CALL WAITSET
 
     MOV AX,0B800H
     MOV ES,AX
@@ -205,60 +209,79 @@ DISPLAY:
     MOV DS,AX
 
     MOV CX,9
-	HANDOFFSET:;ÂàáÊç¢Êï∞ÊçÆÊÆµ
+    HANDOFFSET:;«–ªª ˝æ›∂Œ
     PUSH CX
-    	MOV SI,0000
+	    XOR SI,SI
     	MOV CX,64
-		HANDDATA:;ÂàáÊç¢‰∏Ä‰ªΩÊï∞ÊçÆ
-        PUSH CX
-        	MOV CX,4
-			HANDINDATA:;ÂàáÊç¢500Â≠óËäÇÂÜÖÁöÑÊï∞ÊçÆ(125Â≠óËäÇ)
+	    HANDDATA:;«–ªª“ª∑› ˝æ›
+    	PUSH CX
+	        MOV CX,4
+	        HANDINDATA:;«–ªª500◊÷Ω⁄ƒ⁄µƒ ˝æ›(125◊÷Ω⁄)
         	PUSH CX
-    			XOR BX,BX
-    			MOV CX,125
-				HANDFRAMES:;ÂàáÊç¢ÁîªÈù¢
+        		XOR BX,BX
+	        	MOV CX,125
+		        HANDFRAMES:;«–ªªª≠√Ê
         		PUSH CX
-        			LODSB
-        			MOV CX,8
-					HANDBIT:;ÂàáÊç¢ÁîªÈù¢ÂÉèÁ¥†
-        				SHL AL,1
-        				PUSHF
-        				POP DX
-        				AND DX,0001
-        				JNP WHITE
-        					MOV WORD PTR ES:[BX],0020H     ;ÈªëËâ≤
-        					MOV WORD PTR ES:[BX+2],0020H
-        					JMP THIS FAR +13
-						WHITE:
-        					MOV WORD PTR ES:[BX],7FDBH     ;ÁôΩËâ≤
-        					MOV WORD PTR ES:[BX+2],7FDBH
-        				ADD BX,4
-        			LOOP HANDBIT
-        		POP CX
-        		LOOP HANDFRAMES
-        		CALL WAITONE
-        	POP CX
-        	LOOP HANDINDATA
-        	ADD SI,0CH;500+12Â≠óËäÇ
-        POP CX
-        LOOP HANDDATA
-        PUSH DS
-        POP AX
-        ADD AX,800H
-        PUSH AX
-        POP DS
+	        	    LODSB
+		            MOV CX,8
+		            HANDBIT:;«–ªªª≠√ÊœÒÀÿ
+        		    	SHL AL,1
+    		        	PUSHF
+	    		        POP DX
+        	    		AND DX,0001
+	        	    	JNP WHITE
+		        	        MOV WORD PTR ES:[BX],0020H     ;∫⁄…´
+			                MOV WORD PTR ES:[BX+2],0020H
+    			            JMP THIS FAR +13
+            			WHITE:
+	            		    MOV WORD PTR ES:[BX],7FDBH     ;∞◊…´
+		            	    MOV WORD PTR ES:[BX+2],7FDBH
+        	    		ADD BX,4
+	        	    LOOP HANDBIT
+		        POP CX
+    		    LOOP HANDFRAMES
+         		CALL WAITONE;‘›Õ£0.1s
+	        POP CX
+	        LOOP HANDINDATA
+    	    ADD SI,0CH;500+12◊÷Ω⁄
+    	POP CX
+	    LOOP HANDDATA
+    	PUSH DS
+	    POP AX
+    	ADD AX,800H
+    	PUSH AX
+    	POP DS
     POP CX
     LOOP HANDOFFSET
 
     JMP PROEND
 ;-------------------------------------------------------------------------------
+    WAITSET PROC NEAR
+    PUSH AX
+    PUSH DX
+        MOV AL,00110110B    ;00:º∆ ˝∆˜0,11:œ»µÕ◊÷Ω⁄∫Û∏ﬂ◊÷Ω⁄,011:∑Ω≤®∑¢…˙∆˜
+        MOV DX,CTRLPORT8253 ;8253øÿ÷∆∂Àø⁄
+        OUT DX,AL
+
+        MOV AX,11932        ;1.1931816MHz*0.01s=11932
+        MOV DX,DATAPORT8253 ;8253 ˝æ›∂Àø⁄
+        OUT DX,AL
+        XCHG AL,AH
+        OUT DX,AL
+    POP DX
+    POP AX
+    WAITSET ENDP
+;-------------------------------------------------------------------------------
     WAITONE PROC NEAR
-        PUSH CX
-        	MOV CX,7500
-        		NOP
-        	LOOP THIS FAR -1
-        POP CX
-        RET
+	PUSH CX
+	PUSHF
+        STI                 ;ø™∆Ù÷–∂œ
+        MOV CX,10           ;0.01s*10=0.1s
+            HLT             ;Õ£ª˙,µ»¥˝8253–≈∫≈
+        LOOP THIS FAR -1
+    POPF
+	POP CX
+	RET
     WAITONE ENDP
 ;-------------------------------------------------------------------------------
     JMP PROEND

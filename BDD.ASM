@@ -11,25 +11,27 @@ ASSUME CS:CODE;,DS:DATA,SS:STACK,ES:EXTRA
 CODE SEGMENT
     ORG 0100H
 START:
-    CLD
-    STI
+    CLD                             ;递增读取
+    STI                             ;开启中断
 
     MOV DX,CS
-    CALL HEX2ASC
+    LEA DI,PROSEGADDRBUF
+    CALL HEX2ASC                    ;所在段地址转换为字符串
+
     LEA DX,PROSEG
     MOV AH,09H
     INT 21H
 
     MOV AH,01H
     INT 21H
-    CMP AL,13
+    CMP AL,13                       ;按下回车键
     JNE PROEND
 
-    CALL FILETEXT
+    CALL FILETEXT                   ;测试文件是否存在
 
     MOV CX,9
-        CALL READDISK
-    LOOP THIS FAR -3                 ;循环上一条指令9次
+        CALL READDISK               ;读取文件到内存
+    LOOP THIS FAR -3
 
     JMP DISPLAY
 
@@ -37,12 +39,8 @@ START:
     MOV AX,4C00H
     INT 21H
 ;-------------------------------------------------------------------------------
-      DISKDATA DB 0FFH,97H           ;缓冲区段地址     ;012AH
-      BUFFER   DB 10H,00H            ;数据缓冲区
-      HANDLE   DB 00,00              ;文件句柄
-               DB 00,00
-      FILENAME DB '9.BIN',00,00,00   ;文件名
-               DB '$',00
+      INFODATAADDR EQU THIS FAR - START + 100H
+        THEPROGLEN EQU THEEND - START
 ;-------------------------------------------------------------------------------
     CSDISKDATAADDR EQU OFFSET DISKDATA
     CSFILENAMEADDR EQU OFFSET FILENAME
@@ -55,24 +53,30 @@ START:
       CTRLPORT8253 EQU 43H
       DATAPORT8253 EQU 40H
 ;-------------------------------------------------------------------------------
-      ERRINFO1 DB 'MISSING FILES',13,10,'$'                         ;16chars
-        PROSEG DB 'THE PROGRAME SEGMENT IS '                        ;24chars
-    HEX2ASCBUF DB 30H,30H,30H,30H                                   ;4chars
-      SHIFTKEY DB 13,10                                             ;2chars
-    PRESSENTER DB 'PRESS ENTER KEY TO CONTINUE',13,10,'$'           ;30chars
-    ASCIITABLE DB '0123456789ABCFEF'                                ;16chars
+;-----18BYTES-------------------------------------------------------------------
+      DISKDATA DB 0FFH,97H           ;缓冲区段地址
+      BUFFER   DB 10H,00H            ;数据缓冲区
+      HANDLE   DB 00,00              ;文件句柄
+               DB 00,00
+      FILENAME DB '9.BIN',00,00,00   ;文件名
+               DB '$',00
 ;-------------------------------------------------------------------------------
-    HEX2ASC PROC NEAR
-    PUSHF
+        PROSEG DB 'PROG SEGMENT IS '
+ PROSEGADDRBUF DB 4 DUP (30H)
+;      PCMEMORY DB '.BASEMEMORY HAS '
+;     PCMEMSIZE DB 4 DUP (30H)
+;               DB 'KB'
+    PRESSENTER DB 13,10,'PRESS ENTER KEY TO CONTINUE$'
+      ERRINFO1 DB 'MISSING FILE:$'
+    ASCIITABLE DB '0123456789ABCDEF'
+;-------------------------------------------------------------------------------
+HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
     PUSH AX
     PUSH BX
     PUSH CX
-    PUSH DI
     PUSH ES
         PUSH DS
         POP ES
-        CLD
-        LEA DI,HEX2ASCBUF
         LEA BX,ASCIITABLE
         MOV CX,4
         HEX2CHAR:
@@ -80,24 +84,24 @@ START:
             XOR AL,AL
             MOV CX,4
             DXSHIFTAL:
-            SHL DX,1
-            RCL AL,1
+                SHL DX,1
+                RCL AL,1
             LOOP DXSHIFTAL
             XLAT
             STOSB
         POP CX
         LOOP HEX2CHAR
-        LEA DX,HEX2ASCBUF
+        MOV DX,DI
+        XOR DI,DI
     POP ES
-    POP DI
     POP CX
     POP BX
     POP AX
-    POPF
     RET
     HEX2ASC ENDP
 ;-------------------------------------------------------------------------------
-    FILETEXT PROC NEAR
+FILETEXT PROC NEAR
+    PUSHF
     PUSH AX
     PUSH BX
     PUSH CX
@@ -124,9 +128,10 @@ START:
     POP CX
     POP BX
     POP AX
+    POPF
     RET
 
-    MISSFILE:
+MISSFILE:
     MOV DX,OFFSET ERRINFO1
     MOV AH,09
     INT 21H
@@ -136,8 +141,7 @@ START:
     JMP PROEND
     FILETEXT ENDP
 ;-------------------------------------------------------------------------------
-    READDISK PROC NEAR
-    PUSHF
+READDISK PROC NEAR
     PUSH AX
     PUSH BX
     PUSH CX
@@ -178,24 +182,48 @@ START:
     POP CX
     POP BX
     POP AX
-    POPF
     RET
     READDISK ENDP
 ;-------------------------------------------------------------------------------
-    MOVDATA PROC NEAR
+MOVDATA PROC NEAR
     PUSH AX
     PUSH BP
     MOV CX,8;一共16字节
     MOV BP,OFFSET DISKDATA
         MOVDATALOO:;传输程序中的应用字段到数据头部
         MOV AX,CS:[BP]
-        MOV DS:[BP - 012AH],AX
+        MOV DS:[BP - INFODATAADDR],AX
         ADD BP,2
     LOOP MOVDATALOO
     POP BP
     POP AX
     RET
     MOVDATA ENDP
+;-------------------------------------------------------------------------------
+WAITSET PROC NEAR
+    PUSH AX
+    PUSH DX
+        MOV AL,00110110B    ;00:计数器0,11:先低字节后高字节,011:方波发生器
+        MOV DX,CTRLPORT8253 ;8253控制端口
+        OUT DX,AL
+
+        MOV AX,59659        ;1.1931816MHz*0.05s=59659
+        MOV DX,DATAPORT8253 ;8253数据端口
+        OUT DX,AL
+        XCHG AL,AH
+        OUT DX,AL
+    POP DX
+    POP AX
+    WAITSET ENDP
+;-------------------------------------------------------------------------------
+WAITONE PROC NEAR
+    PUSH CX
+        MOV CX,2            ;0.05s*2=0.1s
+            HLT             ;停机,等待8253信号
+        LOOP THIS FAR -1
+    POP CX
+    RET
+    WAITONE ENDP
 ;-------------------------------------------------------------------------------
 DISPLAY:
     XOR DI,DI
@@ -245,45 +273,15 @@ DISPLAY:
             ADD SI,0CH;500+12字节
         POP CX
         LOOP HANDDATA
-        PUSH DS
-        POP AX
+        MOV AX,DS
         ADD AX,800H
         PUSH AX
         POP DS
     POP CX
     LOOP HANDOFFSET
-
-    JMP PROEND
-;-------------------------------------------------------------------------------
-    WAITSET PROC NEAR
-    PUSH AX
-    PUSH DX
-        MOV AL,00110110B    ;00:计数器0,11:先低字节后高字节,011:方波发生器
-        MOV DX,CTRLPORT8253 ;8253控制端口
-        OUT DX,AL
-
-        MOV AX,59659        ;1.1931816MHz*0.05s=59659
-        MOV DX,DATAPORT8253 ;8253数据端口
-        OUT DX,AL
-        XCHG AL,AH
-        OUT DX,AL
-    POP DX
-    POP AX
-    WAITSET ENDP
-;-------------------------------------------------------------------------------
-    WAITONE PROC NEAR
-    PUSH CX
-    PUSHF
-        STI                 ;开启中断
-        MOV CX,2            ;0.05s*2=0.1s
-            HLT             ;停机,等待8253信号
-        LOOP THIS FAR -1
-    POPF
-    POP CX
-    RET
-    WAITONE ENDP
 ;-------------------------------------------------------------------------------
     JMP PROEND
+    THEEND:
+    DB "KOIZUMI"
 CODE ENDS
 END START
-;KOIZUMI

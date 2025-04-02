@@ -1,3 +1,18 @@
+;--------NEW--------
+;X      :100H   --CODE
+;X      :FFFEH  --STACK
+;X+1000H:10H    --1.BIN    |  R |
+;X+1800H:10H    --2.BIN    ^  E v
+;X+2000H:10H    --3.BIN    |  A |
+;X+2800H:10H    --4.BIN    ^  D v
+;X+3000H:10H    --5.BIN    |    |
+;X+3800H:10H    --6.BIN  L ^    v
+;X+4000H:10H    --7.BIN  O |    |
+;X+4800H:10H    --8.BIN  A ^    v
+;X+5000H:10H    --9.BIN  D |    |
+;X+5800H        --END
+
+;--------OLD--------
 ;58000H  --1.BIN    |  R |
 ;60000H  --2.BIN    ^  E v
 ;68000H  --3.BIN    |  A |
@@ -15,6 +30,7 @@ START:
     STI                             ;开启中断
 
     MOV DX,CS
+    ; ADD CS:[DISKDATA],DX
     LEA DI,PROSEGADDRBUF
     CALL HEX2ASC                    ;所在段地址转换为字符串
 
@@ -32,51 +48,53 @@ START:
     MOV CX,9
         CALL READDISK               ;读取文件到内存
     LOOP THIS FAR -3
+    ; ADD CS:[DISKDATA],801H
+    CALL DISPLAY
 
-    JMP DISPLAY
-
-    PROEND:
+    PROEND:                         ;程序终止
     MOV AX,4C00H
     INT 21H
-;-------------------------------------------------------------------------------
-      INFODATAADDR EQU THIS FAR - START + 100H
-        THEPROGLEN EQU THEEND - START
-;-------------------------------------------------------------------------------
+;-----程序相关信息---------------------------------------------------------------
+      INFODATAADDR EQU THIS FAR - START + 100H  ;文件读取的数据地址
+        THEPROGLEN EQU THEEND - START           ;程序长度
+;-----8253控制信息---------------------------------------------------------------
+      CTRLPORT8253 EQU 43H          ;8253控制端口
+      DATAPORT8253 EQU 40H          ;8253数据端口
+;-----读取文件的信息16BYTES------------------------------------------------------
+    DISKDATA DW 97FFH              ;缓存数据长度->缓冲区段地址
+    DISKDATAADDR EQU 00
     CSDISKDATAADDR EQU OFFSET DISKDATA
+
+    BUFFER   DW 0010H              ;数据缓冲区
+    BUFFERADDR EQU 02
+
+    HANDLE   DW 0000H              ;文件句柄
+    HANDLEADDR EQU 04
+
+    FILENAME DB '9.BIN$'           ;文件名
+    FILENAMEADDR EQU 06
     CSFILENAMEADDR EQU OFFSET FILENAME
-;-------------------------------------------------------------------------------
-      DISKDATAADDR EQU 00
-        BUFFERADDR EQU 02
-        HANDLEADDR EQU 04
-      FILENAMEADDR EQU 08
+
+             DB 'STOP'
     DATABUFFERADDR EQU 10H
-      CTRLPORT8253 EQU 43H
-      DATAPORT8253 EQU 40H
-;-------------------------------------------------------------------------------
-;-----18BYTES-------------------------------------------------------------------
-      DISKDATA DB 0FFH,97H           ;缓冲区段地址
-      BUFFER   DB 10H,00H            ;数据缓冲区
-      HANDLE   DB 00,00              ;文件句柄
-               DB 00,00
-      FILENAME DB '9.BIN',00,00,00   ;文件名
-               DB '$',00
-;-------------------------------------------------------------------------------
-        PROSEG DB 'PROG SEGMENT IS '
- PROSEGADDRBUF DB 4 DUP (30H)
+;---显示信息---------------------------------------------------------------------
+           PROSEG DB 'PROG SEGMENT IS '                     ;16B
+    PROSEGADDRBUF DB 4 DUP (30H)                            ;4B
 ;      PCMEMORY DB '.BASEMEMORY HAS '
 ;     PCMEMSIZE DB 4 DUP (30H)
 ;               DB 'KB'
-    PRESSENTER DB 13,10,'PRESS ENTER KEY TO CONTINUE$'
-      ERRINFO1 DB 'MISSING FILE:$'
-    ASCIITABLE DB '0123456789ABCDEF'
+       PRESSENTER DB 13,10,'PRESS ENTER KEY TO CONTINUE$'   ;30B
+       ASCIITABLE DB '0123456789ABCDEF'                     ;16B
+         ERRINFO1 DB 'MISSING FILE:$'                       ;14B
+;        ERRINFO2 DB 'MEMORY SHORTAGE$'
 ;-------------------------------------------------------------------------------
 HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
     PUSH AX
     PUSH BX
     PUSH CX
-    PUSH ES
-        PUSH DS
-        POP ES
+    ; PUSH ES
+    ;     PUSH DS
+    ;     POP ES
         LEA BX,ASCIITABLE
         MOV CX,4
         HEX2CHAR:
@@ -93,14 +111,14 @@ HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
         LOOP HEX2CHAR
         MOV DX,DI
         XOR DI,DI
-    POP ES
+    ; POP ES
     POP CX
     POP BX
     POP AX
     RET
     HEX2ASC ENDP
 ;-------------------------------------------------------------------------------
-FILETEXT PROC NEAR
+FILETEXT PROC NEAR;测试文件是否存在
     PUSHF
     PUSH AX
     PUSH BX
@@ -130,26 +148,24 @@ FILETEXT PROC NEAR
     POP AX
     POPF
     RET
-
-MISSFILE:
+    MISSFILE:
     MOV DX,OFFSET ERRINFO1
     MOV AH,09
     INT 21H
     MOV DX,OFFSET FILENAME
     MOV AH,09
     INT 21H
-    JMP PROEND
+    INT 20H
     FILETEXT ENDP
 ;-------------------------------------------------------------------------------
-READDISK PROC NEAR
+READDISK PROC NEAR;读取磁盘文件到内存
     PUSH AX
     PUSH BX
     PUSH CX
     PUSH DX
-    PUSH BP
     PUSH DS
-        MOV BP,CSDISKDATAADDR
-        MOV AX,CS:[BP]
+        MOV BX,CSDISKDATAADDR
+        MOV AX,CS:[BX]
         MOV DS,AX                     ;DS指向缓冲区段
 
         CALL MOVDATA
@@ -160,24 +176,21 @@ READDISK PROC NEAR
 
         MOV BX,AX                     ;BX文件号
         MOV AX,3F00H                  ;读文件
-        MOV CX,8000H                  ;字节数8000H字节(32768字节)
+        MOV CX,8000H                  ;8000H字节(32768字节)
         LEA DX,DS:[DATABUFFERADDR]    ;DX指向数据缓冲区
         INT 21H
 
         MOV AH,3EH                    ;关闭文件
         INT 21H
 
-        MOV BP,[CSDISKDATAADDR]       ;
-        MOV BX,CS:[BP]
-        SUB BX,800H
-        MOV CS:[BP],BX
+        MOV BX,CSDISKDATAADDR       ;获取缓冲区指针地址
+        SUB WORD PTR CS:[BX],800H     ;缓冲地址-800H
+        ; SUB WORD PTR CS:[CSDISKDATAADDR],800H
 
-        MOV BP,[CSFILENAMEADDR]       ;
-        MOV BL,CS:[BP]
-        DEC BL
-        MOV CS:[BP],BL
+        MOV BX,CSFILENAMEADDR       ;获取文件名指针地址
+        DEC BYTE PTR CS:[BX]          ;文件名-1
+        ; DEC BYTE PTR CS:[CSFILENAMEADDR]
     POP DS
-    POP BP
     POP DX
     POP CX
     POP BX
@@ -185,22 +198,22 @@ READDISK PROC NEAR
     RET
     READDISK ENDP
 ;-------------------------------------------------------------------------------
-MOVDATA PROC NEAR
+MOVDATA PROC NEAR;传输读取文件的信息
     PUSH AX
-    PUSH BP
-    MOV CX,8;一共16字节
-    MOV BP,OFFSET DISKDATA
-        MOVDATALOO:;传输程序中的应用字段到数据头部
-        MOV AX,CS:[BP]
-        MOV DS:[BP - INFODATAADDR],AX
-        ADD BP,2
-    LOOP MOVDATALOO
-    POP BP
+    PUSH BX
+        MOV CX,8            ;一共16字节
+        MOV BX,CSDISKDATAADDR
+        MOVDATALOO:         ;传输程序中的应用字段到数据头部
+            MOV AX,CS:[BX]
+            MOV DS:[BX - INFODATAADDR],AX
+            ADD BX,2
+        LOOP MOVDATALOO
+    POP BX
     POP AX
     RET
     MOVDATA ENDP
 ;-------------------------------------------------------------------------------
-WAITSET PROC NEAR
+WAITSET PROC NEAR;8253设置程序
     PUSH AX
     PUSH DX
         MOV AL,00110110B    ;00:计数器0,11:先低字节后高字节,011:方波发生器
@@ -214,25 +227,25 @@ WAITSET PROC NEAR
         OUT DX,AL
     POP DX
     POP AX
+    RET
     WAITSET ENDP
 ;-------------------------------------------------------------------------------
-WAITONE PROC NEAR
-    PUSH CX
-        MOV CX,2            ;0.05s*2=0.1s
-            HLT             ;停机,等待8253信号
-        LOOP THIS FAR -1
-    POP CX
-    RET
+WAITONE PROC NEAR;暂停0.1秒
+    ; PUSH CX
+        ; MOV CX,2            ;0.05s*2=0.1s
+            ; HLT             ;停机,等待8253信号
+        ; LOOP THIS FAR -1
+    ; POP CX
+    ; RET
     WAITONE ENDP
 ;-------------------------------------------------------------------------------
-DISPLAY:
-    XOR DI,DI
-
+DISPLAY:;显示数据
     CALL WAITSET
 
+    XOR DI,DI
     MOV AX,0B800H
     MOV ES,AX
-    MOV AX,05800H
+    MOV AX,5800H
     MOV DS,AX
 
     MOV CX,9
@@ -253,10 +266,7 @@ DISPLAY:
                     MOV CX,8
                     HANDBIT:;切换画面像素
                         SHL AL,1
-                        PUSHF
-                        POP DX
-                        AND DX,0001
-                        JNP WHITE
+                        JC WHITE
                             MOV WORD PTR ES:[BX],0020H     ;黑色
                             MOV WORD PTR ES:[BX+2],0020H
                             JMP THIS FAR +13
@@ -267,21 +277,23 @@ DISPLAY:
                     LOOP HANDBIT
                 POP CX
                 LOOP HANDFRAMES
-                CALL WAITONE;暂停0.1s
+                ;CALL WAITONE;暂停0.1s
+                HLT
+                HLT
             POP CX
             LOOP HANDINDATA
             ADD SI,0CH;500+12字节
         POP CX
         LOOP HANDDATA
-        MOV AX,DS
+        MOV AX,DS   ;DS+800H
         ADD AX,800H
         PUSH AX
         POP DS
     POP CX
     LOOP HANDOFFSET
+    RET
 ;-------------------------------------------------------------------------------
-    JMP PROEND
     THEEND:
-    DB "KOIZUMI"
+    DB "KOIZUMI";签名
 CODE ENDS
 END START

@@ -1,83 +1,58 @@
 ;--------NEW--------
 ;X      :100H   --CODE
 ;X      :FFFEH  --STACK
-;X+1000H:10H    --1.BIN    |  R |
-;X+1800H:10H    --2.BIN    ^  E v
-;X+2000H:10H    --3.BIN    |  A |
-;X+2800H:10H    --4.BIN    ^  D v
-;X+3000H:10H    --5.BIN    |    |
-;X+3800H:10H    --6.BIN  L ^    v
-;X+4000H:10H    --7.BIN  O |    |
-;X+4800H:10H    --8.BIN  A ^    v
-;X+5000H:10H    --9.BIN  D |    |
+;X+1000H        --1.BININFO
+;X+1000H:10H    --1.BIN       |  R |
+;X+1800H        --2.BININFO
+;X+1800H:10H    --2.BIN       ^  E v
+;X+2000H        --3.BININFO
+;X+2000H:10H    --3.BIN       |  A |
+;X+2000H        --4.BININFO
+;X+2800H:10H    --4.BIN       ^  D v
+;X+2800H        --5.BININFO
+;X+3000H:10H    --5.BIN       |    |
+;X+3000H        --6.BININFO
+;X+3800H:10H    --6.BIN     L ^    v
+;X+4000H        --7.BININFO
+;X+4000H:10H    --7.BIN     O |    |
+;X+4800H        --8.BININFO
+;X+4800H:10H    --8.BIN     A ^    v
+;X+5000H        --9.BININFO
+;X+5000H:10H    --9.BIN     D |    |
 ;X+5800H        --END
-
-;--------OLD--------
-;58000H  --1.BIN    |  R |
-;60000H  --2.BIN    ^  E v
-;68000H  --3.BIN    |  A |
-;70000H  --4.BIN    ^  D v
-;78000H  --5.BIN    |    |
-;80000H  --6.BIN  L ^    v
-;88000H  --7.BIN  O |    |
-;90000H  --8.BIN  A ^    v
-;98000H  --9.BIN  D |    |
-ASSUME CS:CODE;,DS:DATA,SS:STACK,ES:EXTRA
+ASSUME CS:CODE
 CODE SEGMENT
     ORG 0100H
 START:
-    CLD                             ;µÝÔö¶ÁÈ¡
-    STI                             ;¿ªÆôÖÐ¶Ï
-
-    MOV DX,CS
-    ; ADD CS:[DISKDATA],DX
-    LEA DI,PROSEGADDRBUF
-    CALL HEX2ASC                    ;ËùÔÚ¶ÎµØÖ·×ª»»Îª×Ö·û´®
-
-    LEA DX,PROSEG
-    MOV AH,09H
-    INT 21H
-
-    MOV AH,01H
-    INT 21H
-    CMP AL,13                       ;°´ÏÂ»Ø³µ¼ü
-    JNE PROEND
-
-    CALL FILETEXT                   ;²âÊÔÎÄ¼þÊÇ·ñ´æÔÚ
-
-    MOV CX,9
-        CALL READDISK               ;¶ÁÈ¡ÎÄ¼þµ½ÄÚ´æ
-    LOOP THIS FAR -3
-    ; ADD CS:[DISKDATA],801H
-    CALL DISPLAY
-
-    PROEND:                         ;³ÌÐòÖÕÖ¹
-    MOV AX,4C00H
-    INT 21H
-;-----³ÌÐòÏà¹ØÐÅÏ¢---------------------------------------------------------------
-      INFODATAADDR EQU THIS FAR - START + 100H  ;ÎÄ¼þ¶ÁÈ¡µÄÊý¾ÝµØÖ·
-        THEPROGLEN EQU THEEND - START           ;³ÌÐò³¤¶È
-;-----8253¿ØÖÆÐÅÏ¢---------------------------------------------------------------
-      CTRLPORT8253 EQU 43H          ;8253¿ØÖÆ¶Ë¿Ú
-      DATAPORT8253 EQU 40H          ;8253Êý¾Ý¶Ë¿Ú
-;-----¶ÁÈ¡ÎÄ¼þµÄÐÅÏ¢16BYTES------------------------------------------------------
-    DISKDATA DW 97FFH              ;»º´æÊý¾Ý³¤¶È->»º³åÇø¶ÎµØÖ·
+    JMP MAIN
+    DB "KOIZUMI";ç­¾å
+    DB 25H,04H,15H,19H,59H,16H
+;-----ç¨‹åºç›¸å…³ä¿¡æ¯---------------------------------------------------------------
+      INFODATAADDR EQU THIS FAR - START + 100H  ;æ–‡ä»¶è¯»å–çš„æ•°æ®åœ°å€
+        THEPROGLEN EQU THEEND - START           ;ç¨‹åºé•¿åº¦
+;-----8253æŽ§åˆ¶ä¿¡æ¯---------------------------------------------------------------
+      CTRLPORT8253 EQU 43H          ;8253æŽ§åˆ¶ç«¯å£
+      DATAPORT8253 EQU 40H          ;8253æ•°æ®ç«¯å£
+;-----è¯»å–æ–‡ä»¶çš„ä¿¡æ¯16BYTES------------------------------------------------------
+    DISKDATA DW 5000H                 ;ç¼“å­˜æ•°æ®é•¿åº¦->ç¼“å†²åŒºæ®µåœ°å€
     DISKDATAADDR EQU 00
     CSDISKDATAADDR EQU OFFSET DISKDATA
 
-    BUFFER   DW 0010H              ;Êý¾Ý»º³åÇø
+    BUFFER   DW 0010H              ;æ•°æ®ç¼“å†²åŒº
     BUFFERADDR EQU 02
 
-    HANDLE   DW 0000H              ;ÎÄ¼þ¾ä±ú
+    HANDLE   DW 0000H              ;æ–‡ä»¶å¥æŸ„
     HANDLEADDR EQU 04
 
-    FILENAME DB '9.BIN$'           ;ÎÄ¼þÃû
+    FILENAME DB '9.BIN',00,00,00,"$";æ–‡ä»¶å
     FILENAMEADDR EQU 06
     CSFILENAMEADDR EQU OFFSET FILENAME
 
-             DB 'STOP'
+             DB 05AH
     DATABUFFERADDR EQU 10H
-;---ÏÔÊ¾ÐÅÏ¢---------------------------------------------------------------------
+;---ç¼“å†²åŒºæ®µåœ°å€-----------------------------------------------------------------
+    STARTLOADADDRESS  DW 1001H      ;ä»Žæ­¤å¼€å§‹è¯»å–æ•°æ®
+;---æ˜¾ç¤ºä¿¡æ¯---------------------------------------------------------------------
            PROSEG DB 'PROG SEGMENT IS '                     ;16B
     PROSEGADDRBUF DB 4 DUP (30H)                            ;4B
 ;      PCMEMORY DB '.BASEMEMORY HAS '
@@ -87,6 +62,37 @@ START:
        ASCIITABLE DB '0123456789ABCDEF'                     ;16B
          ERRINFO1 DB 'MISSING FILE:$'                       ;14B
 ;        ERRINFO2 DB 'MEMORY SHORTAGE$'
+;-------------------------------------------------------------------------------
+MAIN:
+    CLD                             ;é€’å¢žè¯»å–
+    STI                             ;å¼€å¯ä¸­æ–­
+
+    MOV DX,CS
+    ADD WORD PTR [DISKDATA],DX
+    ADD WORD PTR [STARTLOADADDRESS],DX
+
+    LEA DI,PROSEGADDRBUF
+    CALL HEX2ASC                    ;æ‰€åœ¨æ®µåœ°å€è½¬æ¢ä¸ºå­—ç¬¦ä¸²
+
+    LEA DX,PROSEG
+    MOV AH,09H
+    INT 21H
+
+    MOV AH,01H
+    INT 21H
+    CMP AL,13                       ;æŒ‰ä¸‹å›žè½¦é”®
+    JNE PROEND
+    
+    CALL FILETEXT                   ;æµ‹è¯•æ–‡ä»¶æ˜¯å¦å­˜åœ¨
+
+    MOV CX,9
+        CALL READDISK               ;è¯»å–æ–‡ä»¶åˆ°å†…å­˜
+    LOOP THIS FAR -3
+    
+    CALL DISPLAY
+
+    PROEND:
+    INT 20H
 ;-------------------------------------------------------------------------------
 HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
     PUSH AX
@@ -118,7 +124,7 @@ HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
     RET
     HEX2ASC ENDP
 ;-------------------------------------------------------------------------------
-FILETEXT PROC NEAR;²âÊÔÎÄ¼þÊÇ·ñ´æÔÚ
+FILETEXT PROC NEAR;æµ‹è¯•æ–‡ä»¶æ˜¯å¦å­˜åœ¨
     PUSHF
     PUSH AX
     PUSH BX
@@ -126,12 +132,12 @@ FILETEXT PROC NEAR;²âÊÔÎÄ¼þÊÇ·ñ´æÔÚ
     PUSH DX
         MOV CX,9
         FILETEXTLOO:
-            CLC                           ;CFÖÃ0,·ÀÖ¹Îó´¥
+            CLC                           ;CFç½®0,é˜²æ­¢è¯¯è§¦
             MOV DX,OFFSET FILENAME
             MOV AX,3D00H
-            INT 21H                       ;Èô´ò¿ª³É¹¦,CF=0.Ê§°ÜÔòÎª1
+            INT 21H                       ;è‹¥æ‰“å¼€æˆåŠŸ,CF=0.å¤±è´¥åˆ™ä¸º1
 
-            JC MISSFILE                   ;ÈôCF=1
+            JC MISSFILE                   ;è‹¥CF=1
             MOV BX,DX
             DEC BYTE PTR [BX]
 
@@ -158,7 +164,7 @@ FILETEXT PROC NEAR;²âÊÔÎÄ¼þÊÇ·ñ´æÔÚ
     INT 20H
     FILETEXT ENDP
 ;-------------------------------------------------------------------------------
-READDISK PROC NEAR;¶ÁÈ¡´ÅÅÌÎÄ¼þµ½ÄÚ´æ
+READDISK PROC NEAR;è¯»å–ç£ç›˜æ–‡ä»¶åˆ°å†…å­˜
     PUSH AX
     PUSH BX
     PUSH CX
@@ -166,30 +172,28 @@ READDISK PROC NEAR;¶ÁÈ¡´ÅÅÌÎÄ¼þµ½ÄÚ´æ
     PUSH DS
         MOV BX,CSDISKDATAADDR
         MOV AX,CS:[BX]
-        MOV DS,AX                     ;DSÖ¸Ïò»º³åÇø¶Î
+        MOV DS,AX                     ;DSæŒ‡å‘ç¼“å†²åŒºæ®µ
 
         CALL MOVDATA
 
-        LEA DX,DS:[FILENAMEADDR]      ;DXÖ¸ÏòÎÄ¼þÃû
+        LEA DX,DS:[FILENAMEADDR]      ;DXæŒ‡å‘æ–‡ä»¶å
         MOV AX,3D00H
-        INT 21H                       ;AH´ò¿ªÎÄ¼þAL¶ÁÈ¡·½Ê½Ö»¶Á
+        INT 21H                       ;AHæ‰“å¼€æ–‡ä»¶ALè¯»å–æ–¹å¼åªè¯»
 
-        MOV BX,AX                     ;BXÎÄ¼þºÅ
-        MOV AX,3F00H                  ;¶ÁÎÄ¼þ
-        MOV CX,8000H                  ;8000H×Ö½Ú(32768×Ö½Ú)
-        LEA DX,DS:[DATABUFFERADDR]    ;DXÖ¸ÏòÊý¾Ý»º³åÇø
+        MOV BX,AX                     ;BXæ–‡ä»¶å·
+        MOV AX,3F00H                  ;è¯»æ–‡ä»¶
+        MOV CX,8000H                  ;8000Hå­—èŠ‚(32768å­—èŠ‚)
+        LEA DX,DS:[DATABUFFERADDR]    ;DXæŒ‡å‘æ•°æ®ç¼“å†²åŒº
         INT 21H
 
-        MOV AH,3EH                    ;¹Ø±ÕÎÄ¼þ
+        MOV AH,3EH                    ;å…³é—­æ–‡ä»¶
         INT 21H
 
-        MOV BX,CSDISKDATAADDR       ;»ñÈ¡»º³åÇøÖ¸ÕëµØÖ·
-        SUB WORD PTR CS:[BX],800H     ;»º³åµØÖ·-800H
-        ; SUB WORD PTR CS:[CSDISKDATAADDR],800H
+        MOV BX,CSDISKDATAADDR       ;èŽ·å–ç¼“å†²åŒºæŒ‡é’ˆåœ°å€
+        SUB WORD PTR CS:[BX],800H     ;ç¼“å†²åœ°å€-800H
 
-        MOV BX,CSFILENAMEADDR       ;»ñÈ¡ÎÄ¼þÃûÖ¸ÕëµØÖ·
-        DEC BYTE PTR CS:[BX]          ;ÎÄ¼þÃû-1
-        ; DEC BYTE PTR CS:[CSFILENAMEADDR]
+        MOV BX,CSFILENAMEADDR       ;èŽ·å–æ–‡ä»¶åæŒ‡é’ˆåœ°å€
+        DEC BYTE PTR CS:[BX]          ;æ–‡ä»¶å-1
     POP DS
     POP DX
     POP CX
@@ -198,12 +202,12 @@ READDISK PROC NEAR;¶ÁÈ¡´ÅÅÌÎÄ¼þµ½ÄÚ´æ
     RET
     READDISK ENDP
 ;-------------------------------------------------------------------------------
-MOVDATA PROC NEAR;´«Êä¶ÁÈ¡ÎÄ¼þµÄÐÅÏ¢
+MOVDATA PROC NEAR;ä¼ è¾“è¯»å–æ–‡ä»¶çš„ä¿¡æ¯
     PUSH AX
     PUSH BX
-        MOV CX,8            ;Ò»¹²16×Ö½Ú
+        MOV CX,8            ;ä¸€å…±16å­—èŠ‚
         MOV BX,CSDISKDATAADDR
-        MOVDATALOO:         ;´«Êä³ÌÐòÖÐµÄÓ¦ÓÃ×Ö¶Îµ½Êý¾ÝÍ·²¿
+        MOVDATALOO:         ;ä¼ è¾“ç¨‹åºä¸­çš„åº”ç”¨å­—æ®µåˆ°æ•°æ®å¤´éƒ¨
             MOV AX,CS:[BX]
             MOV DS:[BX - INFODATAADDR],AX
             ADD BX,2
@@ -213,15 +217,15 @@ MOVDATA PROC NEAR;´«Êä¶ÁÈ¡ÎÄ¼þµÄÐÅÏ¢
     RET
     MOVDATA ENDP
 ;-------------------------------------------------------------------------------
-WAITSET PROC NEAR;8253ÉèÖÃ³ÌÐò
+WAITSET PROC NEAR;8253è®¾ç½®ç¨‹åº
     PUSH AX
     PUSH DX
-        MOV AL,00110110B    ;00:¼ÆÊýÆ÷0,11:ÏÈµÍ×Ö½Úºó¸ß×Ö½Ú,011:·½²¨·¢ÉúÆ÷
-        MOV DX,CTRLPORT8253 ;8253¿ØÖÆ¶Ë¿Ú
+        MOV AL,00110110B    ;00:è®¡æ•°å™¨0,11:å…ˆä½Žå­—èŠ‚åŽé«˜å­—èŠ‚,011:æ–¹æ³¢å‘ç”Ÿå™¨
+        MOV DX,CTRLPORT8253 ;8253æŽ§åˆ¶ç«¯å£
         OUT DX,AL
 
         MOV AX,59659        ;1.1931816MHz*0.05s=59659
-        MOV DX,DATAPORT8253 ;8253Êý¾Ý¶Ë¿Ú
+        MOV DX,DATAPORT8253 ;8253æ•°æ®ç«¯å£
         OUT DX,AL
         XCHG AL,AH
         OUT DX,AL
@@ -230,59 +234,59 @@ WAITSET PROC NEAR;8253ÉèÖÃ³ÌÐò
     RET
     WAITSET ENDP
 ;-------------------------------------------------------------------------------
-WAITONE PROC NEAR;ÔÝÍ£0.1Ãë
+WAITONE PROC NEAR;æš‚åœ0.1ç§’
     ; PUSH CX
         ; MOV CX,2            ;0.05s*2=0.1s
-            ; HLT             ;Í£»ú,µÈ´ý8253ÐÅºÅ
+            ; HLT             ;åœæœº,ç­‰å¾…8253ä¿¡å·
         ; LOOP THIS FAR -1
     ; POP CX
     ; RET
     WAITONE ENDP
 ;-------------------------------------------------------------------------------
-DISPLAY:;ÏÔÊ¾Êý¾Ý
+DISPLAY:;æ˜¾ç¤ºæ•°æ®
     CALL WAITSET
 
     XOR DI,DI
     MOV AX,0B800H
     MOV ES,AX
-    MOV AX,5800H
+    MOV AX,[STARTLOADADDRESS]
     MOV DS,AX
 
     MOV CX,9
-    HANDOFFSET:;ÇÐ»»Êý¾Ý¶Î
+    HANDOFFSET:;åˆ‡æ¢æ•°æ®æ®µ
     PUSH CX
         XOR SI,SI
         MOV CX,64
-        HANDDATA:;ÇÐ»»Ò»·ÝÊý¾Ý
+        HANDDATA:;åˆ‡æ¢ä¸€ä»½æ•°æ®
         PUSH CX
             MOV CX,4
-            HANDINDATA:;ÇÐ»»500×Ö½ÚÄÚµÄÊý¾Ý(125×Ö½Ú)
+            HANDINDATA:;åˆ‡æ¢500å­—èŠ‚å†…çš„æ•°æ®(125å­—èŠ‚)
             PUSH CX
                 XOR BX,BX
                 MOV CX,125
-                HANDFRAMES:;ÇÐ»»»­Ãæ
+                HANDFRAMES:;åˆ‡æ¢ç”»é¢
                 PUSH CX
                     LODSB
                     MOV CX,8
-                    HANDBIT:;ÇÐ»»»­ÃæÏñËØ
+                    HANDBIT:;åˆ‡æ¢ç”»é¢åƒç´ 
                         SHL AL,1
                         JC WHITE
-                            MOV WORD PTR ES:[BX],0020H     ;ºÚÉ«
+                            MOV WORD PTR ES:[BX],0020H     ;é»‘è‰²
                             MOV WORD PTR ES:[BX+2],0020H
                             JMP THIS FAR +13
                         WHITE:
-                            MOV WORD PTR ES:[BX],7FDBH     ;°×É«
+                            MOV WORD PTR ES:[BX],7FDBH     ;ç™½è‰²
                             MOV WORD PTR ES:[BX+2],7FDBH
                         ADD BX,4
                     LOOP HANDBIT
                 POP CX
                 LOOP HANDFRAMES
-                ;CALL WAITONE;ÔÝÍ£0.1s
+                ;CALL WAITONE;æš‚åœ0.1s
                 HLT
                 HLT
             POP CX
             LOOP HANDINDATA
-            ADD SI,0CH;500+12×Ö½Ú
+            ADD SI,0CH;500+12å­—èŠ‚
         POP CX
         LOOP HANDDATA
         MOV AX,DS   ;DS+800H
@@ -294,6 +298,5 @@ DISPLAY:;ÏÔÊ¾Êý¾Ý
     RET
 ;-------------------------------------------------------------------------------
     THEEND:
-    DB "KOIZUMI";Ç©Ãû
 CODE ENDS
 END START

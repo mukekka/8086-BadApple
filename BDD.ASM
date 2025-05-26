@@ -7,11 +7,11 @@
 ;X+1800H:10H    --2.BIN       ^  E v
 ;X+2000H        --3.BININFO
 ;X+2000H:10H    --3.BIN       |  A |
-;X+2000H        --4.BININFO
+;X+2800H        --4.BININFO
 ;X+2800H:10H    --4.BIN       ^  D v
-;X+2800H        --5.BININFO
+;X+3000H        --5.BININFO
 ;X+3000H:10H    --5.BIN       |    |
-;X+3000H        --6.BININFO
+;X+3800H        --6.BININFO
 ;X+3800H:10H    --6.BIN     L ^    v
 ;X+4000H        --7.BININFO
 ;X+4000H:10H    --7.BIN     O |    |

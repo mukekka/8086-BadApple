@@ -72,7 +72,7 @@ CODE SEGMENT
         CALL MOVE_DATA_INFO
         CALL READ_DISK
 
-        CALL DELAY_1S
+        CALL DELAY_005S_SET
 
         CALL DISPLAY
     PRO_END:
@@ -216,7 +216,7 @@ READ_DISK PROC NEAR
     RET
     READ_DISK ENDP
 ;---8253设置程序-----------------------------------------------------------------
-DELAY_1S PROC NEAR
+DELAY_005S_SET PROC NEAR
     PUSH AX
     PUSH DX
         MOV AL,00110110B      ;00:计数器0,11:先低字节后高字节,011:方波发生器
@@ -231,7 +231,7 @@ DELAY_1S PROC NEAR
     POP DX
     POP AX
     RET
-    DELAY_1S ENDP
+    DELAY_005S_SET ENDP
     CTRL_PORT_8253 EQU 43H          ;8253控制端口
     DATA_PORT_8253 EQU 40H          ;8253数据端口
 ;-------------------------------------------------------------------------------
@@ -286,7 +286,7 @@ DISPLAY PROC NEAR
                 LOOP HAND_UNIT_IN_DATA
                 INC WORD PTR [BP-4]
                 JNZ DISPLAY_CONTINUE          ;如果溢出说明已经读取全部单元
-                    ADD SP,4
+                    ADD SP,8
                     JMP SHORT DISPLAY_END
                 DISPLAY_CONTINUE:
             POP CX
@@ -294,8 +294,8 @@ DISPLAY PROC NEAR
             ADD WORD PTR [BP-2],1000H   ;指向下一个数据段
         POP CX
         LOOP HAND_OFFSET
-        DISPLAY_END:
     ADD SP,4
+    DISPLAY_END:
     POP BP
     POP ES
     POP DS

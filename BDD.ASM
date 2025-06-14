@@ -248,7 +248,7 @@ DISPLAY PROC NEAR
         MOV ES,AX
         PUSH [START_LOAD_SEG]
         POP [BP-2]
-        MOV [BP-4],64984 ;将计数器设为65535与552(单元数)的差+1,计数完成后将溢出
+        MOV [BP-4],64987 ;将计数器设为65535与549(单元数)的差+1,计数完成后将溢出
 
         MOV CX,5
         HAND_OFFSET:;切换数据段

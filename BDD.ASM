@@ -1,16 +1,16 @@
 ;-------------------------------------------------------------------------------
 ;X      :100H   --CODE
 ;X      :FFFEH  --STACK
-;X+1000H        --1.BIN INFO            L|  R|
-;X+1001H        --1.BIN(0010H-FFEBH)     v   v
-;X+2000H        --2.BIN INFO            O|  E|
-;X+2001H        --2.BIN(0010H-FFEBH)     v   v
-;X+3000H        --3.BIN INFO            A|  A|
-;X+3001H        --3.BIN(0010H-FFEBH)     v   v
-;X+4000H        --4.BIN INFO            D|  D|
-;X+4001H        --4.BIN(0010H-FFEBH)     v   v
-;X+5000H        --5.BIN INFO             |   |
-;X+5001H        --5.BIN(0010H-30E3H)     v   v
+;X+1000H        --1.BIN INFO
+;X+1001H        --1.BIN(0000H-FFDBH,65500)37CCF0DC
+;X+2000H        --2.BIN INFO
+;X+2001H        --2.BIN(0000H-FFDBH,65500)266FE0D3
+;X+3000H        --3.BIN INFO
+;X+3001H        --3.BIN(0000H-FFDBH,65500)3DFA1315
+;X+4000H        --4.BIN INFO
+;X+4001H        --4.BIN(0000H-FFDBH,65500)3BD1ECEB
+;X+5000H        --5.BIN INFO
+;X+5001H        --5.BIN(0000H-30D3H,12500)092834E8
 ;-------------------------------------------------------------------------------
 ASSUME CS:CODE
 CODE SEGMENT
@@ -18,37 +18,41 @@ CODE SEGMENT
  START:
     JMP MAIN
     DB "KOIZUMI"
-    DB 25H,06H,15H,03H,44H,00H
-;---ç¨‹åºç›¸å…³ä¿¡æ¯-----------------------------------------------------------------
-    INFO_DATA_ADDRESS EQU THIS FAR - START + 100H  ;æ–‡ä»¶è¯»å–çš„æ•°æ®åœ°å€
-    THE_PROG_LEN EQU THEEND - START           ;ç¨‹åºé•¿åº¦
-;---è¯»å–æ–‡ä»¶é…ç½®ä¿¡æ¯--------------------------------------------------------------
+    DB 25H,06H,17H,21H,38H,00H
+;---³ÌÐòÏà¹ØÐÅÏ¢-----------------------------------------------------------------
+    INFO_DATA_ADDRESS EQU THIS FAR - START + 100H  ;ÎÄ¼þ¶ÁÈ¡µÄÊý¾ÝµØÖ·
+    THE_PROG_LEN EQU THEEND - START                ;³ÌÐò³¤¶È
+    FILE_COUNTS EQU 5                              ;5¸öÎÄ¼þ
+    UNIT_COUNTS EQU 549                            ;µ¥Ôª×ÜÊý
+    UNIT_COUNT EQU 0FFFFH - UNIT_COUNTS + 1
+;---¶ÁÈ¡ÎÄ¼þÅäÖÃÐÅÏ¢--------------------------------------------------------------
 FILE_INFO:
-    BUFFER DW 0010H                    ;æ•°æ®ç¼“å†²åŒº
+    BUFFER DW 0010H                    ;Êý¾Ý»º³åÇø
     BUFFER_ADDRESS EQU 00
 
-    HANDLE DW 0000H                    ;æ–‡ä»¶å¥æŸ„
+    HANDLE DW 0000H                    ;ÎÄ¼þ¾ä±ú
     HANDLE_ADDRESS EQU 02
 
-    FILE_NAME DB '1.BIN',00,00,00,"$"  ;æ–‡ä»¶å
+    FILE_NAME DB '1.BIN',00,00,00,"$"  ;ÎÄ¼þÃû
     FILE_NAME_ADDRESS EQU 04
     CS_FILE_NAME_ADDRESS EQU OFFSET FILE_NAME
 
-    DB '...'
-    DATA_BUFFER_ADDRESS EQU 10H        ;æ¯ä¸ªæ®µä¸­æ•°æ®çš„èµ·å§‹ä½ç½®
-;---ç¼“å†²åŒºæ®µåœ°å€-----------------------------------------------------------------
-    START_READ_SEG  DW 1001H      ;ä»Žæ­¤å¼€å§‹è¯»å–æ•°æ®
-;---æ˜¾ç¤ºä¿¡æ¯---------------------------------------------------------------------
+    DB '!'
+    DATA_BUFFER_ADDRESS EQU 10H        ;Ã¿¸ö¶ÎÖÐÊý¾ÝµÄÆðÊ¼Î»ÖÃ
+    START_READ_SEG  DW 1001H           ;´Ó´Ë¿ªÊ¼¶ÁÈ¡Êý¾Ý
+;-------------------------------------------------------------------------------
+    ASCII_TABLE DB '0123456789ABCDEF'                   ;16B
+;---ÏÔÊ¾ÐÅÏ¢---------------------------------------------------------------------
     PRO_SEG DB 'PROG SEGMENT IS '                       ;16B
     PRO_SEG_ADDRESS_BUFFER DB 4 DUP (30H)               ;4B
  ;      PCMEMORY DB '.BASEMEMORY HAS '
  ;     PCMEMSIZE DB 4 DUP (30H)
  ;               DB 'KB'
     PRESS_ENTER DB 13,10,'PRESS ENTER KEY TO CONTINUE$' ;30B
-    ASCII_TABLE DB '0123456789ABCDEF'                   ;16B
     ERRINFO_1 DB 'MISSING FILE:$'                       ;14B
- ;        ERRINFO_2 DB 'MEMORY SHORTAGE$'
-;---ä¸»ç¨‹åº-----------------------------------------------------------------------
+ ;  ERRINFO_2 DB 'MEMORY SHORTAGE$'
+    ERRINFO_3 DB 'FILE VERIFY FAIL:$'                   ;18B
+;---Ö÷³ÌÐò-----------------------------------------------------------------------
 MAIN:
         CLD
         STI
@@ -69,15 +73,16 @@ MAIN:
         CALL FILE_TEXT
         CALL MOVE_FILE_INFO
         CALL READ_DISK
+        CALL FILE_VERIFY
 
         CALL DELAY_005S_SET
-        CALL DISPLAY
+        ; CALL DISPLAY
     PRO_END:
-        MOV AH,4CH
+        MOV AX,4C00H        ;00:Íê³ÉÔËÐÐ
         INT 21H
 ;-------------------------------------------------------------------------------
-;---äºŒè¿›åˆ¶æ•°è½¬å­—ç¬¦ä¸²--------------------------------------------------------------
-HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
+;---¶þ½øÖÆÊý×ª×Ö·û´®--;IN:DX=Ê®Áù½øÖÆÊý,DI=Êä³ö×Ö·û´®µØÖ·.OUT:DX=Êä³ö×Ö·û´®µØÖ·------
+HEX2ASC PROC NEAR
     PUSH AX
     PUSH BX
     PUSH CX
@@ -87,10 +92,10 @@ HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
         PUSH CX
             XOR AL,AL
             MOV CX,4
-            DXSHIFTAL:
+            DX_SHIFT_AL:
                 SHL DX,1
                 RCL AL,1
-            LOOP DXSHIFTAL
+            LOOP DX_SHIFT_AL
             XLAT
             STOSB
         POP CX
@@ -102,30 +107,41 @@ HEX2ASC PROC NEAR   ;IN:DX=HEX NUM,DI=OUT BUFFER.OUT:DX=OUT BUFFER
     POP AX
     RET
     HEX2ASC ENDP
-;---æµ‹è¯•æ–‡ä»¶å­˜åœ¨-----------------------------------------------------------------
+;---²âÊÔÎÄ¼þ´æÔÚ-----------------------------------------------------------------
 FILE_TEXT PROC NEAR
     PUSHF
     PUSH AX
     PUSH BX
     PUSH CX
     PUSH DX
-        MOV CX,5
-        FILETEXTLOO:
-            CLC                           ;CFç½®0,é˜²æ­¢è¯¯è§¦
-            MOV DX,OFFSET FILE_NAME
+        MOV CX,FILE_COUNTS
+        FILE_TEXT_LOOP:
+            CLC                           ;CFÖÃ0,·ÀÖ¹Îó´¥
+            LEA DX,FILE_NAME
             MOV AX,3D00H
-            INT 21H                       ;è‹¥æ‰“å¼€æˆåŠŸ,CF=0.å¤±è´¥åˆ™ä¸º1
+            INT 21H                       ;Èô´ò¿ª³É¹¦,CF=0.Ê§°ÜÔòÎª1
 
-            JC MISSFILE                   ;è‹¥CF=1
+            JNC NOT_MISS_FILE                   ;ÈôCF=0
+                LEA DX,ERRINFO_1
+                MOV AH,09
+                INT 21H
+                LEA DX,FILE_NAME
+                MOV AH,09
+                INT 21H
+                CLI                 ;¹ØÖÐ¶Ï×÷Îª±êÖ¾Î»
+            NOT_MISS_FILE:
             MOV BX,DX
             INC BYTE PTR [BX]
-
             PUSH BX
                 MOV BX,AX
                 MOV AX,3E00H
-                INT 21H
+                INT 21H             ;¹ØÎÄ¼þ
             POP BX
-        LOOP FILETEXTLOO
+        LOOP FILE_TEXT_LOOP
+        PUSHF
+        POP AX
+        CMP AL,00000010B   ;¼ì²âÖÐ¶ÏÎ»
+        JNE MISS_FILE
         MOV BYTE PTR [FILE_NAME],'1'
     POP DX
     POP CX
@@ -134,16 +150,18 @@ FILE_TEXT PROC NEAR
     POPF
     RET
 
-    MISSFILE:
-    MOV DX,OFFSET ERRINFO_1
-    MOV AH,09
+    MISS_FILE:
+    MOV AX,4C01H        ;01:ÎÄ¼þÈ±ÉÙ
     INT 21H
-    MOV DX,OFFSET FILE_NAME
-    MOV AH,09
-    INT 21H
-    INT 20H
     FILE_TEXT ENDP
-;---é…ç½®æ–‡ä»¶ä¼ è¾“ä¿¡æ¯--------------------------------------------------------------
+;---ÄÚ´æ¼ì²â---------------------------------------------------------------------
+MEMORY_TEXT PROC NEAR
+    PUSH AX
+
+    POP AX
+    RET
+    MEMORY_TEXT ENDP
+;---ÅäÖÃÎÄ¼þ´«ÊäÐÅÏ¢--------------------------------------------------------------
 MOVE_FILE_INFO PROC NEAR
     PUSH ES
     PUSH BX
@@ -152,18 +170,19 @@ MOVE_FILE_INFO PROC NEAR
     PUSH DI
         MOV BX,ES
 
-        MOV CX,5
+        MOV CX,FILE_COUNTS
         MOVE_FILE_INFO_NEXT_SEG:
         PUSH CX
             LEA SI,FILE_INFO
-            ADD BX,1000H                    ;ESæŒ‡å‘ä¸‹ä¸€ä¸ªæ®µ
+            ADD BX,1000H                    ;ESÖ¸ÏòÏÂÒ»¸ö¶Î
             MOV ES,BX
             XOR DI,DI
             MOV CX,8
             REP MOVSW
         POP CX
-        INC BYTE PTR CS:[FILE_NAME]     ;æ–‡ä»¶å+1
+        INC BYTE PTR CS:[FILE_NAME]     ;ÎÄ¼þÃû+1
         LOOP MOVE_FILE_INFO_NEXT_SEG
+        MOV BYTE PTR [FILE_NAME],'1'
     POP DI
     POP SI
     POP CX
@@ -171,7 +190,7 @@ MOVE_FILE_INFO PROC NEAR
     POP ES
     RET
     MOVE_FILE_INFO ENDP
-;---è¯»å–æ–‡ä»¶åˆ°å†…å­˜----------------------------------------------------------------
+;---¶ÁÈ¡ÎÄ¼þµ½ÄÚ´æ----------------------------------------------------------------
 READ_DISK PROC NEAR
     PUSH AX
     PUSH BX
@@ -182,23 +201,23 @@ READ_DISK PROC NEAR
     MOV BP,SP
     SUB SP,2
         MOV [BP-2],DS
-        MOV CX,5
+        MOV CX,FILE_COUNTS
         READ_DISK_LOOP:
         PUSH CX
             ADD [BP-2],1000H
             MOV DS,[BP-2]
 
-            LEA DX,DS:[FILE_NAME_ADDRESS]       ;æŒ‡å‘æ–‡ä»¶å
+            LEA DX,DS:[FILE_NAME_ADDRESS]       ;Ö¸ÏòÎÄ¼þÃû
             MOV AX,3D00H
-            INT 21H                             ;AHæ‰“å¼€æ–‡ä»¶ALè¯»å–æ–¹å¼åªè¯»
+            INT 21H                             ;AH´ò¿ªÎÄ¼þAL¶ÁÈ¡·½Ê½Ö»¶Á
 
-            MOV BX,AX                           ;BXæ–‡ä»¶å·
-            MOV AX,3F00H                        ;è¯»æ–‡ä»¶
-            MOV CX,65500                        ;65500å­—èŠ‚
-            LEA DX,DS:[DATA_BUFFER_ADDRESS]     ;DXæŒ‡å‘æ•°æ®ç¼“å†²åŒº
+            MOV BX,AX                           ;BXÎÄ¼þºÅ
+            MOV AX,3F00H                        ;¶ÁÎÄ¼þ
+            MOV CX,65500                        ;65500×Ö½Ú
+            LEA DX,DS:[DATA_BUFFER_ADDRESS]     ;DXÖ¸ÏòÊý¾Ý»º³åÇø
             INT 21H
 
-            MOV AH,3EH                          ;å…³é—­æ–‡ä»¶
+            MOV AH,3EH                          ;¹Ø±ÕÎÄ¼þ
             INT 21H
         POP CX
         LOOP READ_DISK_LOOP
@@ -211,16 +230,104 @@ READ_DISK PROC NEAR
     POP AX
     RET
     READ_DISK ENDP
-;---8253è®¾ç½®ç¨‹åº-----------------------------------------------------------------
+;---ÎÄ¼þÐ£Ñé---------------------------------------------------------------------
+FILE_VERIFY PROC NEAR
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH SI
+    PUSH DS
+    PUSH BP
+    MOV BP,SP
+    SUB SP,12
+        MOV [BP-2],UNIT_COUNT
+        LEA BX,[BP-4]
+        MOV [BP-4], 0F0DCH      ;1.BINÐ£Ñé  ;BXÖ¸Ïò´Ë
+        MOV [BP-6], 0E0D3H      ;2.BINÐ£Ñé
+        MOV [BP-8], 01315H      ;3.BINÐ£Ñé
+        MOV [BP-10],0ECEBH      ;4.BINÐ£Ñé
+        MOV [BP-12],034E8H      ;5.BINÐ£Ñé
+        MOV AX,[START_READ_SEG]
+        MOV DS,AX
+
+        MOV CX,FILE_COUNTS
+        FILE_VERIFY_LOOP:;Ò»¸ö¶ÎÒ»¸öÎÄ¼þ
+        PUSH CX
+            XOR DX,DX   ;ÀÛ¼ÓÆ÷¹éÁã
+            XOR SI,SI   ;Ö¸ÏòµÚÒ»¸ö×Ö
+            MOV CX,131
+            FILE_VERIFY_UNIT_LOOP:;Ã¿¶Î131¸öµ¥Ôª
+            PUSH CX
+                MOV CX,250
+                FILE_VERIFY_UNIT_IN_DATA_LOOP:;Ã¿¸öµ¥Ôª500×Ö½Ú
+                    LODSW
+                    ADD DX,AX           ;µþ¼Ó¶ÎÄÚÊý¾ÝµÄÖµ(Ð£Ñé½á¹û)
+                LOOP FILE_VERIFY_UNIT_IN_DATA_LOOP
+                INC WORD PTR [BP-2]     ;µ¥Ôª¼ÆÊýÆ÷
+                JNZ FILE_VERIFY_LOOP_CONTINUE;Èô¼ÆÊýÆ÷Î´Âú
+                    ADD SP,4            ;¶ªÆúÁ½¸öCX¼ÆÊýÆ÷
+                    XOR SS:[BX],DX      ;ÈôÐ£ÑéÖµÕýÈ·£¬Ôò½«ÖµÖÃ0
+                        MOV AX,CS
+                        MOV DS,AX       ;DSÖ¸Ïò³ÌÐò
+                        LEA BX,[BP-4]   ;BXÖ¸ÏòµÚÒ»¸öÎÄ¼þÐ£ÑéÖµ
+                        MOV CX,FILE_COUNTS
+                        FILE_VERIFY_TEST:
+                            CMP WORD PTR [BX],0
+                            JZ FILE_VERIFY_NOT_FAIL;ÈçÐ£ÑéÖµ²»ÕýÈ·
+                                MOV AH,09H
+                                LEA DX,ERRINFO_3
+                                INT 21H
+                                MOV AH,09H
+                                LEA DX,FILE_NAME
+                                INT 21H             ;´òÓ¡´íÎóÐÅÏ¢ÓëÎÄ¼þÃû
+                                CLI                 ;¹Ø±ÕÖÐ¶Ï×÷Îª±êÖ¾Î»
+                            FILE_VERIFY_NOT_FAIL:
+                            SUB BX,2                ;ÏÂÒ»¸öÎÄ¼þÐ£ÑéÖµ
+                            INC BYTE PTR [FILE_NAME];ÏÂÒ»¸öÎÄ¼þ
+                        LOOP FILE_VERIFY_TEST
+                        JMP SHORT FILE_VERIFY_END   ;ÍË³öÎÄ¼þÐ£Ñé
+                FILE_VERIFY_LOOP_CONTINUE:
+            POP CX    
+            LOOP FILE_VERIFY_UNIT_LOOP
+            XOR SS:[BX],DX
+            SUB BX,2        ;ÈôÐ£ÑéÖµÕýÈ·£¬Ôò½«ÖµÖÃ0
+            MOV AX,DS
+            ADD AX,1000H
+            MOV DS,AX       ;ÏÂÒ»¸öÊý¾Ý¶Î
+        POP CX
+        LOOP FILE_VERIFY_LOOP
+
+        FILE_VERIFY_END:
+        PUSHF
+        POP AX
+        CMP AL,00000010B   ;¼ì²âÖÐ¶ÏÎ»
+        JE FILE_VERIFY_LOSE
+
+        MOV BYTE PTR [FILE_NAME],'1';»Ö¸´ÎÄ¼þÃûÎª³õÊ¼Öµ
+    ADD SP,12
+    POP BP
+    POP DS
+    POP SI
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+    FILE_VERIFY_LOSE:
+        MOV AX,4C02H        ;02:ÎÄ¼þÐ£ÑéÊ§°Ü
+        INT 21H
+    FILE_VERIFY ENDP
+;---8253ÉèÖÃ³ÌÐò-----------------------------------------------------------------
 DELAY_005S_SET PROC NEAR
     PUSH AX
     PUSH DX
-        MOV AL,00110110B      ;00:è®¡æ•°å™¨0,11:å…ˆä½Žå­—èŠ‚åŽé«˜å­—èŠ‚,011:æ–¹æ³¢å‘ç”Ÿå™¨
-        MOV DX,CTRL_PORT_8253 ;8253æŽ§åˆ¶ç«¯å£
+        MOV AL,00110110B      ;00:¼ÆÊýÆ÷0,11:ÏÈµÍ×Ö½Úºó¸ß×Ö½Ú,011:·½²¨·¢ÉúÆ÷
+        MOV DX,CTRL_PORT_8253 ;8253¿ØÖÆ¶Ë¿Ú
         OUT DX,AL
 
         MOV AX,59659          ;1.1931816MHz*0.05s=59659
-        MOV DX,DATA_PORT_8253 ;8253æ•°æ®ç«¯å£
+        MOV DX,DATA_PORT_8253 ;8253Êý¾Ý¶Ë¿Ú
         OUT DX,AL
         XCHG AL,AH
         OUT DX,AL
@@ -228,66 +335,63 @@ DELAY_005S_SET PROC NEAR
     POP AX
     RET
     DELAY_005S_SET ENDP
-    CTRL_PORT_8253 EQU 43H          ;8253æŽ§åˆ¶ç«¯å£
-    DATA_PORT_8253 EQU 40H          ;8253æ•°æ®ç«¯å£
-;---æ˜¾ç¤º-------------------------------------------------------------------------
+    CTRL_PORT_8253 EQU 43H          ;8253¿ØÖÆ¶Ë¿Ú
+    DATA_PORT_8253 EQU 40H          ;8253Êý¾Ý¶Ë¿Ú
+;---ÏÔÊ¾-------------------------------------------------------------------------
 DISPLAY PROC NEAR
     PUSH DS
     PUSH ES
     PUSH BP
     MOV BP,SP
     SUB SP,4
-    ;[BP-2]:æ•°æ®æ®µåœ°å€
-    ;[BP-4]:å•å…ƒè®¡æ•°å™¨
-        XOR DI,DI   ;DIåˆ°ç¬¬1è¡Œç¬¬1åˆ—
+        XOR DI,DI   ;DIµ½µÚ1ÐÐµÚ1ÁÐ
         MOV AX,0B800H
-        MOV ES,AX   ;ESæŒ‡å‘æ˜¾ç¤ºç¼“å†²åŒº
+        MOV ES,AX   ;ESÖ¸ÏòÏÔÊ¾»º³åÇø
         MOV AX,[START_READ_SEG]
-        MOV WORD PTR [BP-2],AX
-        MOV [BP-4],0FFFFH - 549 + 1 ;å°†è®¡æ•°å™¨è®¾ä¸º65535ä¸Ž549(å•å…ƒæ•°)çš„å·®+1,è®¡æ•°å®ŒæˆåŽå°†æº¢å‡º
-
-        MOV CX,5
-        HAND_OFFSET:;åˆ‡æ¢æ•°æ®æ®µ
+        MOV [BP-2],AX           ;Êý¾Ý¶ÎÆðÊ¼µØÖ·
+        MOV [BP-4],UNIT_COUNT   ;µ¥Ôª¼ÆÊýÆ÷
+        MOV CX,FILE_COUNTS
+        HAND_OFFSET:;ÇÐ»»Êý¾Ý¶Î
         PUSH CX
             MOV DS,[BP-2]
-            XOR SI,SI;æºæŒ‡å‘æ•°æ®ç¬¬ä¸€ä¸ªå­—
+            XOR SI,SI;Ô´Ö¸ÏòÊý¾ÝµÚÒ»¸ö×Ö½Ú
             MOV CX,131
-            HAND_UNIT:;åˆ‡æ¢å•å…ƒ(500å­—èŠ‚)
+            HAND_UNIT:;ÇÐ»»µ¥Ôª(Ã¿¶Î131¸öµ¥Ôª£¬Ã¿¸öµ¥Ôª500×Ö½Ú)
             PUSH CX
                 MOV CX,4
-                HAND_UNIT_IN_DATA:;åˆ‡æ¢å•å…ƒå†…æ•°æ®
+                HAND_UNIT_IN_DATA:;ÇÐ»»µ¥ÔªÄÚÊý¾Ý(125*4)
                 PUSH CX
                     XOR BX,BX
                     MOV CX,125
-                    HAND_FRAME:;åˆ‡æ¢ç”»é¢
+                    HAND_FRAME:;ÇÐ»»»­Ãæ
                     PUSH CX
                         LODSB
                         MOV CX,8
-                        HAND_BIT:;åˆ‡æ¢åƒç´ 
+                        HAND_BIT:;ÇÐ»»ÏñËØ
                             SHL AL,1
                             JC WHITE
-                                MOV WORD PTR ES:[BX],0020H     ;é»‘è‰²
+                                MOV WORD PTR ES:[BX],0020H     ;ºÚÉ«
                                 MOV WORD PTR ES:[BX+2],0020H
                                 JMP THIS FAR +13
                             WHITE:
-                                MOV WORD PTR ES:[BX],7FDBH     ;ç™½è‰²
+                                MOV WORD PTR ES:[BX],7FDBH     ;°×É«
                                 MOV WORD PTR ES:[BX+2],7FDBH
                             ADD BX,4
                         LOOP HAND_BIT
                     POP CX
                     LOOP HAND_FRAME
                     HLT
-                    HLT
+                    HLT                       ;ÔÝÍ£0.1Ãë
                 POP CX
                 LOOP HAND_UNIT_IN_DATA
                 INC WORD PTR [BP-4]
-                JNZ DISPLAY_CONTINUE          ;å¦‚æžœæº¢å‡ºè¯´æ˜Žå·²ç»è¯»å–å…¨éƒ¨å•å…ƒ
+                JNZ DISPLAY_CONTINUE          ;Èç¹ûÒç³öËµÃ÷ÒÑ¾­¶ÁÈ¡È«²¿µ¥Ôª
                     ADD SP,8
                     JMP SHORT DISPLAY_END
                 DISPLAY_CONTINUE:
             POP CX
             LOOP HAND_UNIT
-            ADD WORD PTR [BP-2],1000H   ;æŒ‡å‘ä¸‹ä¸€ä¸ªæ•°æ®æ®µ
+            ADD WORD PTR [BP-2],1000H   ;Ö¸ÏòÏÂÒ»¸öÊý¾Ý¶Î
         POP CX
         LOOP HAND_OFFSET
     ADD SP,4

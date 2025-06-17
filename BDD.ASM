@@ -76,7 +76,7 @@ MAIN:
         CALL FILE_VERIFY
 
         CALL DELAY_005S_SET
-        ; CALL DISPLAY
+        CALL DISPLAY
     PRO_END:
         MOV AX,4C00H        ;00:完成运行
         INT 21H

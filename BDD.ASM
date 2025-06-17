@@ -109,12 +109,13 @@ HEX2ASC PROC NEAR
     HEX2ASC ENDP
 ;---测试文件存在-----------------------------------------------------------------
 FILE_TEXT PROC NEAR
-    PUSHF
     PUSH AX
     PUSH BX
     PUSH CX
     PUSH DX
+    PUSH SI
         MOV CX,FILE_COUNTS
+        MOV SI,CX                         ;SI置为非零
         FILE_TEXT_LOOP:
             CLC                           ;CF置0,防止误触
             LEA DX,FILE_NAME
@@ -128,7 +129,7 @@ FILE_TEXT PROC NEAR
                 LEA DX,FILE_NAME
                 MOV AH,09
                 INT 21H
-                CLI                 ;关中断作为标志位
+                XOR SI,SI                  ;缺少文件则将SI置零
             NOT_MISS_FILE:
             MOV BX,DX
             INC BYTE PTR [BX]
@@ -138,16 +139,15 @@ FILE_TEXT PROC NEAR
                 INT 21H             ;关文件
             POP BX
         LOOP FILE_TEXT_LOOP
-        PUSHF
-        POP AX
-        AND AL,00000010B   ;检测中断位
-        JE MISS_FILE
+
+        CMP SI,0
+        JZ MISS_FILE
         MOV BYTE PTR [FILE_NAME],'1'
+    POP SI
     POP DX
     POP CX
     POP BX
     POP AX
-    POPF
     RET
 
     MISS_FILE:
@@ -237,6 +237,7 @@ FILE_VERIFY PROC NEAR
     PUSH CX
     PUSH DX
     PUSH SI
+    PUSH DI
     PUSH DS
     PUSH BP
     MOV BP,SP
@@ -250,6 +251,7 @@ FILE_VERIFY PROC NEAR
         MOV [BP-12],034E8H      ;5.BIN校验
         MOV AX,[START_READ_SEG]
         MOV DS,AX
+        MOV DI,AX               ;DI置为非零
 
         MOV CX,FILE_COUNTS
         FILE_VERIFY_LOOP:;一个段一个文件
@@ -281,7 +283,7 @@ FILE_VERIFY PROC NEAR
                                 MOV AH,09H
                                 LEA DX,FILE_NAME
                                 INT 21H             ;打印错误信息与文件名
-                                CLI                 ;关闭中断作为标志位
+                                XOR DI,DI           ;将DI置零
                             FILE_VERIFY_NOT_FAIL:
                             SUB BX,2                ;下一个文件校验值
                             INC BYTE PTR [FILE_NAME];下一个文件
@@ -299,15 +301,14 @@ FILE_VERIFY PROC NEAR
         LOOP FILE_VERIFY_LOOP
 
         FILE_VERIFY_END:
-        PUSHF
-        POP AX
-        AND AL,00000010B   ;检测中断位
-        JE FILE_VERIFY_LOSE
+        CMP DI,0
+        JZ FILE_VERIFY_LOSE
 
         MOV BYTE PTR [FILE_NAME],'1';恢复文件名为初始值
     ADD SP,12
     POP BP
     POP DS
+    POP DI
     POP SI
     POP DX
     POP CX

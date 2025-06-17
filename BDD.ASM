@@ -140,8 +140,8 @@ FILE_TEXT PROC NEAR
         LOOP FILE_TEXT_LOOP
         PUSHF
         POP AX
-        CMP AL,00000010B   ;检测中断位
-        JNE MISS_FILE
+        AND AL,00000010B   ;检测中断位
+        JE MISS_FILE
         MOV BYTE PTR [FILE_NAME],'1'
     POP DX
     POP CX
@@ -301,7 +301,7 @@ FILE_VERIFY PROC NEAR
         FILE_VERIFY_END:
         PUSHF
         POP AX
-        CMP AL,00000010B   ;检测中断位
+        AND AL,00000010B   ;检测中断位
         JE FILE_VERIFY_LOSE
 
         MOV BYTE PTR [FILE_NAME],'1';恢复文件名为初始值
@@ -323,14 +323,12 @@ DELAY_005S_SET PROC NEAR
     PUSH AX
     PUSH DX
         MOV AL,00110110B      ;00:计数器0,11:先低字节后高字节,011:方波发生器
-        MOV DX,CTRL_PORT_8253 ;8253控制端口
-        OUT DX,AL
+        OUT CTRL_PORT_8253,AL
 
         MOV AX,59659          ;1.1931816MHz*0.05s=59659
-        MOV DX,DATA_PORT_8253 ;8253数据端口
-        OUT DX,AL
+        OUT DATA_PORT_8253,AL
         XCHG AL,AH
-        OUT DX,AL
+        OUT DATA_PORT_8253,AL
     POP DX
     POP AX
     RET

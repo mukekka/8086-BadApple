@@ -1,4 +1,3 @@
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans)
 # 使用环境  
 操作系统最低为MS-DOS3.30  
 需要约512KB的常规内存  
@@ -23,6 +22,7 @@
 │     └─9x  
 └─README.md  
   
-**CC BY-NC-SA 4.0协议仅包含BDD.ASM**
-**FDD360.IMG的内容版权归Microsoft与东映动画所有**  
-**IMAGE.zip的内容版权归东映动画所有**
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans)  
+**CC BY-NC-SA 4.0协议仅可应用于BDD.ASM**  
+**FDD360.IMG的部分内容版权归Microsoft与东映动画所有**  
+**IMAGE.zip的内容版权归东映动画所有**  

@@ -22,6 +22,7 @@
 │   └─BIN32K:二进制文件(32768B,18944B)  
 │     └─9x  
 └─README.md  
-
+  
+**CC BY-NC-SA 4.0协议仅包含BDD.ASM**
 **FDD360.IMG的内容版权归Microsoft与东映动画所有**  
 **IMAGE.zip的内容版权归东映动画所有**

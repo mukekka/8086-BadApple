@@ -1,10 +1,11 @@
 # 使用环境  
-操作系统最低需要为Microsoft MS-DOS3.20  
+操作系统最低需要为IBM PC-DOS2.00  
 需要约512KB的常规内存  
+机器最低为IBM XT 5160
 # 文件内容  
 /  
 ├─BDD.ASM:源码文件  
-├─FDD360.IMG:磁盘文件，规格为5.25inch，360KB大小  
+├─FDD320.IMG:磁盘文件，规格为5.25inch，320KB大小  
 ├─IMAGE.zip:画面文件  
 │ └─IMAGE  
 │   ├─BMP104024:图片文件(尺寸4024)  
@@ -23,5 +24,5 @@
   
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.zh-hans)  
 **CC BY-NC-SA 4.0协议仅可应用于BDD.ASM**  
-**FDD360.IMG的部分内容版权归东映动画所有**  
+**FDD320.IMG的部分内容版权归东映动画所有**  
 **IMAGE.zip的内容版权归东映动画所有**  
